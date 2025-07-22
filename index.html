@@ -9,21 +9,28 @@
         .character {
             width: 100px;
             height: 150px;
-            background-color: #8B4513;
+            background-color: #8B4513; /* Brown body */
             position: relative;
             margin: 0 auto 20px;
             border: 2px solid #000;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
         }
         .equipped-item {
             position: absolute;
-            width: 100%;
+            width: 80px;
+            height: 40px;
             text-align: center;
-            font-size: 12px;
             color: white;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
-        .hat { top: -20px; }
-        .armor { top: 20px; }
-        .pet { bottom: -20px; left: 50%; transform: translateX(-50%); }
+        .hat { top: -40px; background-color: #FF4500; } /* Orange hat */
+        .armor { top: 20px; background-color: #4682B4; } /* Steel blue armor */
+        .pet { bottom: -40px; left: 50%; transform: translateX(-50%); background-color: #32CD32; } /* Lime green pet */
     </style>
 </head>
 <body class="bg-gray-900 text-white font-sans">
@@ -128,7 +135,7 @@
         function logout() {
             document.getElementById('login').classList.remove('hidden');
             document.getElementById('teacher-dashboard').classList.add('hidden');
-            document.getElementById('student-dashboard').classList.remove('hidden'); // Fixed typo
+            document.getElementById('student-dashboard').classList.add('hidden');
             document.getElementById('username').value = '';
             document.getElementById('password').value = '';
             document.getElementById('login-error').classList.add('hidden');
