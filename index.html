@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ClassPoints RPG</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-white font-sans">
+    <!-- Login Section -->
+    <section id="login" class="min-h-screen flex items-center justify-center">
+        <div class="bg-gray-800 p-8 rounded-lg shadow-lg max-w-md w-full">
+            <h2 class="text-3xl font-bold mb-6 text-center">ClassPoints RPG</h2>
+            <div id="login-error" class="text-red-500 mb-4 hidden">Invalid credentials</div>
+            <input id="username" type="text" placeholder="Username" class="w-full p-3 mb-4 bg-gray-700 rounded">
+            <input id="password" type="password" placeholder="Password" class="w-full p-3 mb-4 bg-gray-700 rounded">
+            <select id="user-type" class="w-full p-3 mb-4 bg-gray-700 rounded">
+                <option value="student">Student</option>
+                <option value="teacher">Teacher</option>
+            </select>
+            <button onclick="login()" class="w-full bg-blue-600 p-3 rounded hover:bg-blue-700">Login</button>
+        </div>
+    </section>
+
+    <!-- Teacher Dashboard -->
+    <section id="teacher-dashboard" class="min-h-screen p-8 hidden">
+        <div class="container mx-auto">
+            <h2 class="text-3xl font-bold mb-8">Teacher Dashboard</h2>
+            <button onclick="logout()" class="bg-red-600 px-4 py-2 rounded hover:bg-red-700 mb-6">Logout</button>
+            <h3 class="text-2xl mb-4">Assign Points</h3>
+            <div class="bg-gray-800 p-6 rounded-lg">
+                <input id="student-name" type="text" placeholder="Student Username" class="p-3 bg-gray-700 rounded mb-4 w-full max-w-xs">
+                <input id="points-amount" type="number" placeholder="Points" class="p-3 bg-gray-700 rounded mb-4 w-full max-w-xs">
+                <select id="points-reason" class="p-3 bg-gray-700 rounded mb-4 w-full max-w-xs">
+                    <option value="Good Work">Good Work</option>
+                    <option value="Staying on Task">Staying on Task</option>
+                    <option value="Completed Homework">Completed Homework</option>
+                    <option value="Other">Other</option>
+                </select>
+                <button onclick="assignPoints()" class="bg-green-600 px-4 py-2 rounded hover:bg-green-700">Assign Points</button>
+            </div>
+            <h3 class="text-2xl mt-8 mb-4">Class Roster</h3>
+            <div id="student-list" class="grid grid-cols-1 md:grid-cols-3 gap-4"></div>
+        </div>
+    </section>
+
+    <!-- Student Dashboard -->
+    <section id="student-dashboard" class="min-h-screen p-8 hidden">
+        <div class="container mx-auto">
+            <h2 class="text-3xl font-bold mb-8">Welcome, <span id="student-username"></span>!</h2>
+            <button onclick="logout()" class="bg-red-600 px-4 py-2 rounded hover:bg-red-700 mb-6">Logout</button>
+            <div class="bg-gray-800 p-6 rounded-lg mb-8">
+                <h3 class="text-2xl mb-4">Your Character</h3>
+                <p><strong id="character-name"></strong></p>
+                <p>Points: <span id="student-points">0</span></p>
+                <div id="student-inventory" class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4"></div>
+            </div>
+            <h3 class="text-2xl mb-4">Shop</h3>
+            <div id="shop" class="grid grid-cols-1 md:grid-cols-3 gap-4"></div>
+        </div>
+    </section>
+
+    <script>
+        // Sample shop items inspired by images
+        const shopItems = [
+            { id: 1, name: "Red Helmet", cost: 15, description: "A cool red helmet!" },
+            { id: 2, name: "Viking Horns", cost: 20, description: "Epic viking horns!" },
+            { id: 3, name: "Chef Hat", cost: 15, description: "A tasty chef hat!" },
+            { id: 4, name: "Wizard Hat", cost: 25, description: "Magical wizard hat!" },
+            { id: 5, name: "Pumpkin Head", cost: 25, description: "Spooky pumpkin head!" },
+            { id: 6, name: "Knight Armor", cost: 50, description: "Shiny knight armor!" },
+            { id: 7, name: "Dragon Pet", cost: 150, description: "A loyal dragon pet!" }
+        ];
+
+        // Initialize localStorage if empty
+        if (!localStorage.getItem('users')) {
+            localStorage.setItem('users', JSON.stringify({
+                teacher: { username: 'teacher', password: 'teach123' },
+                students: {}
+            }));
+        }
+
+        function login() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const userType = document.getElementById('user-type').value;
+            const users = JSON.parse(localStorage.getItem('users'));
+
+            if (userType === 'teacher' && username === users.teacher.username && password === users.teacher.password) {
+                document.getElementById('login').classList.add('hidden');
+                document.getElementById('teacher-dashboard').classList.remove('hidden');
+                loadStudentList();
+            } else if (userType === 'student' && users.students[username]) {
+                if (users.students[username].password === password) {
+                    document.getElementById('login').classList.add('hidden');
+                    document.getElementById('student-dashboard').classList.remove('hidden');
+                    loadStudentDashboard(username);
+                } else {
+                    document.getElementById('login-error').classList.remove('hidden');
+                }
+            } else {
+                document.getElementById('login-error').classList.remove('hidden');
+            }
+        }
+
+        function logout() {
+            document.getElementById('login').classList.remove('hidden');
+            document.getElementById('teacher-dashboard').classList.add('hidden');
+            document.getElementById('student-dashboard').classList.add('hidden');
+            document.getElementById('username').value = '';
+            document.getElementById('password').value = '';
+            document.getElementById('login-error').classList.add('hidden');
+        }
+
+        function assignPoints() {
+            const studentName = document.getElementById('student-name').value;
+            const points = parseInt(document.getElementById('points-amount').value);
+            const reason = document.getElementById('points-reason').value;
+            if (!studentName || isNaN(points) || points <= 0) {
+                alert('Please enter a valid student username and points.');
+                return;
+            }
+
+            const users = JSON.parse(localStorage.getItem('users'));
+            if (!users.students[studentName]) {
+                users.students[studentName] = { password: 'student123', points: 0, inventory: [] };
+            }
+            users.students[studentName].points += points;
+            localStorage.setItem('users', JSON.stringify(users));
+            alert(`Assigned ${points} points to ${studentName} for ${reason}`);
+            loadStudentList();
+        }
+
+        function loadStudentList() {
+            const users = JSON.parse(localStorage.getItem('users'));
+            const studentList = document.getElementById('student-list');
+            studentList.innerHTML = '';
+            for (const [username, data] of Object.entries(users.students)) {
+                const div = document.createElement('div');
+                div.className = 'bg-gray-700 p-4 rounded flex items-center';
+                div.innerHTML = `<p class="mr-4"><strong>${username}</strong></p><p>Points: ${data.points}</p><p class="ml-4">Items: ${data.inventory.map(id => shopItems.find(item => item.id === id).name).join(', ') || 'None'}</p>`;
+                studentList.appendChild(div);
+            }
+        }
+
+        function loadStudentDashboard(username) {
+            const users = JSON.parse(localStorage.getItem('users'));
+            const student = users.students[username];
+            document.getElementById('student-username').textContent = username;
+            document.getElementById('character-name').textContent = username; // Simple character name
+            document.getElementById('student-points').textContent = student.points;
+            const inventory = document.getElementById('student-inventory');
+            inventory.innerHTML = '';
+            student.inventory.forEach(itemId => {
+                const item = shopItems.find(i => i.id === itemId);
+                const div = document.createElement('div');
+                div.className = 'bg-gray-700 p-4 rounded';
+                div.innerHTML = `<p><strong>${item.name}</strong></p><p>${item.description}</p>`;
+                inventory.appendChild(div);
+            });
+
+            const shop = document.getElementById('shop');
+            shop.innerHTML = '';
+            shopItems.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'bg-gray-700 p-4 rounded';
+                div.innerHTML = `
+                    <p><strong>${item.name}</strong></p>
+                    <p>${item.description}</p>
+                    <p>Cost: ${item.cost} points</p>
+                    <button class="bg-blue-600 px-4 py-2 rounded hover:bg-blue-700" onclick="buyItem('${username}', ${item.id})" ${student.points < item.cost ? 'disabled' : ''}>Buy</button>
+                `;
+                shop.appendChild(div);
+            });
+        }
+
+        function buyItem(username, itemId) {
+            const users = JSON.parse(localStorage.getItem('users'));
+            const student = users.students[username];
+            const item = shopItems.find(i => i.id === itemId);
+            if (student.points >= item.cost) {
+                student.points -= item.cost;
+                student.inventory.push(itemId);
+                localStorage.setItem('users', JSON.stringify(users));
+                alert(`Purchased ${item.name}!`);
+                loadStudentDashboard(username);
+            } else {
+                alert('Not enough points!');
+            }
+        }
+    </script>
+</body>
+</html>
