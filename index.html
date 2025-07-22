@@ -5,6 +5,26 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ClassPoints RPG</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .character {
+            width: 100px;
+            height: 150px;
+            background-color: #8B4513;
+            position: relative;
+            margin: 0 auto 20px;
+            border: 2px solid #000;
+        }
+        .equipped-item {
+            position: absolute;
+            width: 100%;
+            text-align: center;
+            font-size: 12px;
+            color: white;
+        }
+        .hat { top: -20px; }
+        .armor { top: 20px; }
+        .pet { bottom: -20px; left: 50%; transform: translateX(-50%); }
+    </style>
 </head>
 <body class="bg-gray-900 text-white font-sans">
     <!-- Login Section -->
@@ -51,9 +71,11 @@
             <button onclick="logout()" class="bg-red-600 px-4 py-2 rounded hover:bg-red-700 mb-6">Logout</button>
             <div class="bg-gray-800 p-6 rounded-lg mb-8">
                 <h3 class="text-2xl mb-4">Your Character</h3>
+                <div id="character-display" class="character"></div>
                 <p><strong id="character-name"></strong></p>
                 <p>Points: <span id="student-points">0</span></p>
-                <div id="student-inventory" class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4"></div>
+                <h3 class="text-xl mt-6 mb-4">Your Inventory</h3>
+                <div id="student-inventory" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div>
             </div>
             <h3 class="text-2xl mb-4">Shop</h3>
             <div id="shop" class="grid grid-cols-1 md:grid-cols-3 gap-4"></div>
@@ -61,15 +83,15 @@
     </section>
 
     <script>
-        // Sample shop items inspired by images
+        // Sample shop items with categories for equipping
         const shopItems = [
-            { id: 1, name: "Red Helmet", cost: 15, description: "A cool red helmet!" },
-            { id: 2, name: "Viking Horns", cost: 20, description: "Epic viking horns!" },
-            { id: 3, name: "Chef Hat", cost: 15, description: "A tasty chef hat!" },
-            { id: 4, name: "Wizard Hat", cost: 25, description: "Magical wizard hat!" },
-            { id: 5, name: "Pumpkin Head", cost: 25, description: "Spooky pumpkin head!" },
-            { id: 6, name: "Knight Armor", cost: 50, description: "Shiny knight armor!" },
-            { id: 7, name: "Dragon Pet", cost: 150, description: "A loyal dragon pet!" }
+            { id: 1, name: "Red Helmet", cost: 15, description: "A cool red helmet!", type: "hat" },
+            { id: 2, name: "Viking Horns", cost: 20, description: "Epic viking horns!", type: "hat" },
+            { id: 3, name: "Chef Hat", cost: 15, description: "A tasty chef hat!", type: "hat" },
+            { id: 4, name: "Wizard Hat", cost: 25, description: "Magical wizard hat!", type: "hat" },
+            { id: 5, name: "Pumpkin Head", cost: 25, description: "Spooky pumpkin head!", type: "hat" },
+            { id: 6, name: "Knight Armor", cost: 50, description: "Shiny knight armor!", type: "armor" },
+            { id: 7, name: "Dragon Pet", cost: 150, description: "A loyal dragon pet!", type: "pet" }
         ];
 
         // Initialize localStorage if empty
@@ -106,7 +128,7 @@
         function logout() {
             document.getElementById('login').classList.remove('hidden');
             document.getElementById('teacher-dashboard').classList.add('hidden');
-            document.getElementById('student-dashboard').classList.add('hidden');
+            document.getElementById('student-dashboard').classList.remove('hidden'); // Fixed typo
             document.getElementById('username').value = '';
             document.getElementById('password').value = '';
             document.getElementById('login-error').classList.add('hidden');
@@ -123,7 +145,7 @@
 
             const users = JSON.parse(localStorage.getItem('users'));
             if (!users.students[studentName]) {
-                users.students[studentName] = { password: 'student123', points: 0, inventory: [] };
+                users.students[studentName] = { password: 'student123', points: 0, inventory: [], equipped: {} };
             }
             users.students[studentName].points += points;
             localStorage.setItem('users', JSON.stringify(users));
@@ -147,15 +169,36 @@
             const users = JSON.parse(localStorage.getItem('users'));
             const student = users.students[username];
             document.getElementById('student-username').textContent = username;
-            document.getElementById('character-name').textContent = username; // Simple character name
+            document.getElementById('character-name').textContent = username;
             document.getElementById('student-points').textContent = student.points;
+
+            // Display character with equipped items
+            const characterDisplay = document.getElementById('character-display');
+            characterDisplay.innerHTML = '<div class="character"></div>';
+            if (student.equipped.hat) {
+                const hatItem = shopItems.find(i => i.id === student.equipped.hat);
+                characterDisplay.innerHTML += `<div class="equipped-item hat">${hatItem.name}</div>`;
+            }
+            if (student.equipped.armor) {
+                const armorItem = shopItems.find(i => i.id === student.equipped.armor);
+                characterDisplay.innerHTML += `<div class="equipped-item armor">${armorItem.name}</div>`;
+            }
+            if (student.equipped.pet) {
+                const petItem = shopItems.find(i => i.id === student.equipped.pet);
+                characterDisplay.innerHTML += `<div class="equipped-item pet">${petItem.name}</div>`;
+            }
+
             const inventory = document.getElementById('student-inventory');
             inventory.innerHTML = '';
             student.inventory.forEach(itemId => {
                 const item = shopItems.find(i => i.id === itemId);
                 const div = document.createElement('div');
                 div.className = 'bg-gray-700 p-4 rounded';
-                div.innerHTML = `<p><strong>${item.name}</strong></p><p>${item.description}</p>`;
+                div.innerHTML = `
+                    <p><strong>${item.name}</strong></p>
+                    <p>${item.description}</p>
+                    <button class="bg-blue-600 px-4 py-2 rounded hover:bg-blue-700 mt-2" onclick="equipItem('${username}', ${item.id}, '${item.type}')">Equip</button>
+                `;
                 inventory.appendChild(div);
             });
 
@@ -187,6 +230,14 @@
             } else {
                 alert('Not enough points!');
             }
+        }
+
+        function equipItem(username, itemId, itemType) {
+            const users = JSON.parse(localStorage.getItem('users'));
+            const student = users.students[username];
+            student.equipped[itemType] = itemId; // Equip the item
+            localStorage.setItem('users', JSON.stringify(users));
+            loadStudentDashboard(username); // Refresh dashboard to show equipped item
         }
     </script>
 </body>
